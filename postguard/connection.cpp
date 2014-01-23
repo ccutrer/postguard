@@ -15,8 +15,7 @@ static Logger::ptr g_log = Log::lookup("postguard:connection");
 
 namespace Postguard {
 
-Connection::Connection(Postguard &postguard, Stream::ptr stream)
-    : m_postguard(postguard)
+Connection::Connection(Stream::ptr stream)
 {
     MORDOR_ASSERT(stream->supportsRead());
     MORDOR_ASSERT(stream->supportsWrite());

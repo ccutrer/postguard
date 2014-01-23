@@ -14,6 +14,7 @@
 #include <mordor/streams/stream.h>
 
 #include "postguard/postguard.h"
+#include "postguard/server.h"
 
 using namespace Mordor;
 
@@ -21,8 +22,11 @@ static Logger::ptr g_log = Log::lookup("postguard:client");
 
 namespace Postguard {
 
-Client::Client(Postguard &postguard, Stream::ptr stream, const std::string &user)
-    : Connection(postguard, stream),
+Client::Client(Postguard &postguard, IOManager &ioManager, Stream::ptr stream,
+    const std::string &user)
+    : Connection(stream),
+      m_postguard(postguard),
+      m_ioManager(ioManager),
       m_user(user)
 {}
 
@@ -121,10 +125,35 @@ Client::startup()
     }
 
     message.clear();
-    put(message, (uint32_t)0u);
+    put(message, AUTHENTICATION_OK);
     writeV3Message(AUTHENTICATION, message);
 
-    // TODO: establish backend connection
+    parameters["port"] = "15432";
+    try {
+        m_server = Server::connect(m_ioManager, parameters);
+    } catch (...) {
+        MORDOR_LOG_ERROR(g_log) << this << " Unable to connect to server: " <<
+            boost::current_exception_diagnostic_information();
+        writeError("ERROR", "08000", "Unable to connect to server");
+        m_stream->close();
+        return false;
+    }
+
+    message.clear();
+    put(message, m_server->pid());
+    put(message, m_server->secretKey());
+    writeV3Message(BACKEND_KEY_DATA, message);
+
+    for (std::map<std::string, std::string>::const_iterator it(m_server->parameters().begin());
+        it != m_server->parameters().end();
+        ++it) {
+        message.clear();
+        message.copyIn(it->first);
+        message.copyIn("\0", 1u);
+        message.copyIn(it->second);
+        message.copyIn("\0", 1u);
+        writeV3Message(PARAMETER_STATUS, message);
+    }
 
     return true;
 }
@@ -133,7 +162,7 @@ bool
 Client::readyForQuery()
 {
     Buffer message;
-    put(message, 'I');
+    put(message, (char)IDLE);
     writeV3Message(READY_FOR_QUERY, message);
     m_stream->flush();
 

@@ -12,13 +12,15 @@ sbin_PROGRAMS=			\
 nobase_include_HEADERS=			\
 	postguard/client.h		\
 	postguard/connection.h		\
-	postguard/postguard.h
+	postguard/postguard.h		\
+	postguard/server.h
 
 postguard_postguard_SOURCES=		\
 	postguard/client.cpp		\
 	postguard/connection.cpp	\
 	postguard/main.cpp		\
-	postguard/postguard.cpp
+	postguard/postguard.cpp		\
+	postguard/server.cpp
 postguard_postguard_LDADD=			\
 	mordor/mordor/libmordor.la		\
 	$(COREFOUNDATION_FRAMEWORK_LIBS)

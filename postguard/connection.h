@@ -1,3 +1,6 @@
+#ifndef __POSTGUARD_CONNECTION_H__
+#define __POSTGUARD_CONNECTION_H__
+
 // Copyright (c) 2013 - Cody Cutrer
 
 #include <boost/noncopyable.hpp>
@@ -10,8 +13,6 @@ class Stream;
 }
 
 namespace Postguard {
-
-class Postguard;
 
 class Connection : boost::noncopyable
 {
@@ -28,10 +29,13 @@ protected:
 
     enum V3MessageType
     {
-        AUTHENTICATION  =  'R',
-        ERROR_RESPONSE  =  'E',
-        READY_FOR_QUERY = 'Z',
-        TERMINATE       = 'X'
+        AUTHENTICATION   = 'R',
+        BACKEND_KEY_DATA = 'K',
+        ERROR_RESPONSE   = 'E',
+        NOTICE_RESPONSE  = 'N',
+        PARAMETER_STATUS = 'S',
+        READY_FOR_QUERY  = 'Z',
+        TERMINATE        = 'X'
     };
 
     enum ErrorCode
@@ -41,13 +45,27 @@ protected:
         MESSAGE  = 'M'
     };
 
+    enum AuthenticationType
+    {
+        AUTHENTICATION_OK = 0
+    };
+
+    enum Status
+    {
+        IDLE               = 'I',
+        IN_TRANSACTION     = 'T',
+        TRANSACTION_FAILED = 'E'
+    };
+
 public:
     virtual ~Connection() {}
 
     virtual void close();
 
+    boost::shared_ptr<Mordor::Stream> stream() { return m_stream; }
+
 protected:
-    Connection(Postguard &postguard, boost::shared_ptr<Mordor::Stream> stream);
+    Connection(boost::shared_ptr<Mordor::Stream> stream);
 
     void readV2Message(V2MessageType &type, Mordor::Buffer &message);
     void readV3Message(V3MessageType &type, Mordor::Buffer &message);
@@ -60,10 +78,12 @@ protected:
     }
     
 protected:
-    Postguard &m_postguard;
     boost::shared_ptr<Mordor::Stream> m_stream;
 };
 
 template <> void Connection::put<std::string>(Mordor::Buffer &message, const std::string &value);
 
 }
+
+#endif
+

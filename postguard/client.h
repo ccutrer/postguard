@@ -7,19 +7,23 @@
 #include "postguard/connection.h"
 
 namespace Mordor {
+class IOManager;
 class Stream;
 }
 
 namespace Postguard {
 
+class Postguard;
+class Server;
+
 class Client : public Connection
 {
 public:
     typedef boost::shared_ptr<Client> ptr;
-    struct InvalidProtocolException : virtual Mordor::Exception {};
 
 public:
-    Client(Postguard &postguard, boost::shared_ptr<Mordor::Stream> stream,
+    Client(Postguard &postguard, Mordor::IOManager &ioManager,
+           boost::shared_ptr<Mordor::Stream> stream,
            const std::string &user);
 
     void run();
@@ -29,7 +33,10 @@ private:
     bool readyForQuery();
 
 private:
+    Postguard &m_postguard;
+    Mordor::IOManager &m_ioManager;
     std::string m_user;
+    boost::shared_ptr<Server> m_server;
 };
 
 }

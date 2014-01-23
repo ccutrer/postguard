@@ -70,7 +70,7 @@ Postguard::listen()
        if (result)
            user = passwd.pw_name;
 
-       Client::ptr client(new Client(*this, stream, user));
+       Client::ptr client(new Client(*this, m_ioManager, stream, user));
        m_clients.insert(client);
        m_ioManager.schedule(boost::bind(&Client::run, client));
     }
