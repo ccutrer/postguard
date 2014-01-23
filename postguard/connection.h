@@ -2,10 +2,10 @@
 
 #include <boost/noncopyable.hpp>
 
+#include <mordor/streams/buffer.h>
 #include <mordor/exception.h>
 
 namespace Mordor {
-struct Buffer;
 class Stream;
 }
 
@@ -28,6 +28,17 @@ protected:
 
     enum V3MessageType
     {
+        AUTHENTICATION  =  'R',
+        ERROR_RESPONSE  =  'E',
+        READY_FOR_QUERY = 'Z',
+        TERMINATE       = 'X'
+    };
+
+    enum ErrorCode
+    {
+        SEVERITY = 'S',
+        CODE     = 'C',
+        MESSAGE  = 'M'
     };
 
 protected:
@@ -35,10 +46,19 @@ protected:
 
     void readV2Message(V2MessageType &type, Mordor::Buffer &message);
     void readV3Message(V3MessageType &type, Mordor::Buffer &message);
+    void writeV3Message(V3MessageType type, const Mordor::Buffer &message);
 
+    void writeError(const std::string &severity, const std::string &code, const std::string &message);
+
+    template <class T> static void put(Mordor::Buffer &buffer, const T &value) {
+        buffer.copyIn(&value, sizeof(value));
+    }
+    
 protected:
     Postguard &m_postguard;
     boost::shared_ptr<Mordor::Stream> m_stream;
 };
+
+template <> void Connection::put<std::string>(Mordor::Buffer &message, const std::string &value);
 
 }

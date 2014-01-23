@@ -25,7 +25,8 @@ public:
     void run();
 
 private:
-    void startup();
+    bool startup();
+    bool readyForQuery();
 
 private:
     std::string m_user;

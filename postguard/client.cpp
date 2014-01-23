@@ -30,13 +30,17 @@ void
 Client::run()
 {
     try {
-        startup();
-    } catch(UnexpectedEofException &) {
-        // TODO: disconnect, and notify the postguard
+        if (!startup()) {
+            return;
+        }
+        while (readyForQuery());
+    } catch(...) {
+        MORDOR_LOG_ERROR(g_log) << this << " Unexpected exception: " << boost::current_exception_diagnostic_information();
+        // TODO: notify the postguard
     }
 }
 
-void
+bool
 Client::startup()
 {
     V2MessageType type;
@@ -47,8 +51,11 @@ Client::startup()
     readV2Message(type, message);
 
     if (type == SSL_REQUEST) {
-        if (message.readAvailable() != 0)
-            MORDOR_THROW_EXCEPTION(InvalidProtocolException());
+        if (message.readAvailable() != 0) {
+            writeError("ERROR", "08P01", "Invalid SSLRequest message");
+            m_stream->close();
+            return false;
+        }
 
         if (m_postguard.sslCtx()) {
             MORDOR_LOG_VERBOSE(g_log) << this << " accepting SSL request";
@@ -74,8 +81,11 @@ Client::startup()
         readV2Message(type, message);
     }
 
-    if (type != STARTUP_REQUEST_V3)
-        MORDOR_THROW_EXCEPTION(InvalidProtocolException());
+    if (type != STARTUP_REQUEST_V3) {
+        writeError("ERROR", "08P01", "Expected StartupMessage");
+        m_stream->close();
+        return false;
+    }
 
     std::map<std::string, std::string> parameters;
     while (true) {
@@ -90,8 +100,54 @@ Client::startup()
             << ": " << value;
     }
 
-    if (message.readAvailable() != 0)
-        MORDOR_THROW_EXCEPTION(InvalidProtocolException());
+    if (message.readAvailable() != 0) {
+        writeError("ERROR", "08P01", "Invalid StartupMessage message");
+        m_stream->close();
+        return false;
+    }
+
+    if (parameters.find("user") == parameters.end()) {
+        writeError("ERROR", "28P01", "Must provide a username");
+        m_stream->close();
+        return false;
+    }
+
+    const std::string &user = parameters["user"];
+    if (!std::equal(m_user.begin(), m_user.end(), user.begin())) {
+        writeError("ERROR", "28P01", "Requested user is not a suffix of your Unix username");
+        m_stream->close();
+        return false;
+    }
+
+    message.clear();
+    put(message, (uint32_t)0u);
+    writeV3Message(AUTHENTICATION, message);
+
+    // TODO: establish backend connection
+
+    return true;
+}
+
+bool
+Client::readyForQuery()
+{
+    Buffer message;
+    put(message, 'I');
+    writeV3Message(READY_FOR_QUERY, message);
+    m_stream->flush();
+
+    V3MessageType type;
+    readV3Message(type, message);
+
+    switch (type) {
+        case TERMINATE:
+            m_stream->close();
+            return false;
+        default:
+            writeError("ERROR", "08P01", "Unknown message");
+            break;
+    }
+    return true;
 }
 
 }
