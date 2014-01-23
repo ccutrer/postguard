@@ -8,13 +8,15 @@
 #include <mordor/socket.h>
 #include <mordor/streams/socket.h>
 
+#include "postguard/client.h"
+
 using namespace Mordor;
 
 namespace Postguard {
 
 Postguard::Postguard(IOManager &ioManager, const std::string &path,
     SSL_CTX *sslCtx)
-    :// m_ioManager(ioManager),
+    : m_ioManager(ioManager),
       m_sslCtx(sslCtx)
 {
     UnixAddress address(path);
@@ -41,6 +43,11 @@ Postguard::listen()
             return;
        }
        Stream::ptr stream(new SocketStream(socket));
+       std::string user;
+
+       Client::ptr client(new Client(*this, stream, user));
+       m_clients.insert(client);
+       m_ioManager.schedule(boost::bind(&Client::run, client));
     }
 }
 

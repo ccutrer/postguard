@@ -14,6 +14,8 @@ class Socket;
 
 namespace Postguard {
 
+class Client;
+
 class Postguard
 {
 public:
@@ -28,8 +30,9 @@ private:
     void listen();
 
 private:
-    //Mordor::IOManager &m_ioManager;
+    Mordor::IOManager &m_ioManager;
     boost::shared_ptr<Mordor::Socket> m_listen;
+    std::set<boost::shared_ptr<Client> > m_clients;
     SSL_CTX *m_sslCtx;
 };
 
