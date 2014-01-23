@@ -41,6 +41,11 @@ protected:
         MESSAGE  = 'M'
     };
 
+public:
+    virtual ~Connection() {}
+
+    virtual void close();
+
 protected:
     Connection(Postguard &postguard, boost::shared_ptr<Mordor::Stream> stream);
 

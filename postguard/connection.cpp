@@ -24,6 +24,13 @@ Connection::Connection(Postguard &postguard, Stream::ptr stream)
     m_stream.reset(new BufferedStream(stream));
 }
 
+
+void
+Connection::close()
+{
+    m_stream->cancelRead();
+}
+
 void
 Connection::readV2Message(V2MessageType &type, Buffer &message)
 {

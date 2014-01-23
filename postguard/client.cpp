@@ -34,10 +34,11 @@ Client::run()
             return;
         }
         while (readyForQuery());
+    } catch(OperationAbortedException &) {
     } catch(...) {
         MORDOR_LOG_ERROR(g_log) << this << " Unexpected exception: " << boost::current_exception_diagnostic_information();
-        // TODO: notify the postguard
     }
+    // TODO: notify the postguard
 }
 
 bool
