@@ -10,6 +10,8 @@
 #include <mordor/main.h>
 #include <mordor/streams/ssl.h>
 
+#include "postguard/postguard.h"
+
 using namespace Mordor;
 
 namespace Postguard {
@@ -19,6 +21,8 @@ static int daemonMain(int argc, char *argv[])
     try {
         IOManager ioManager;
         boost::shared_ptr<SSL_CTX> sslCtx(SSLStream::generateSelfSignedCertificate());
+        Postguard postguard(ioManager, "/tmp/.s.PGSQL.5432", sslCtx.get());
+        Daemon::onTerminate.connect(boost::bind(&Postguard::stop, &postguard));
 
         ioManager.stop();
         return 0;

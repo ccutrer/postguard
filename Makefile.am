@@ -9,10 +9,12 @@ AM_CXXFLAGS=-Wall -Werror -fno-strict-aliasing
 sbin_PROGRAMS=			\
 	postguard/postguard
 
-nobase_include_HEADERS=
+nobase_include_HEADERS=			\
+	postguard/postguard.h
 
-postguard_postguard_SOURCES=	\
-	postguard/main.cpp
+postguard_postguard_SOURCES=		\
+	postguard/main.cpp		\
+	postguard/postguard.cpp
 postguard_postguard_LDADD=			\
 	mordor/mordor/libmordor.la		\
 	$(COREFOUNDATION_FRAMEWORK_LIBS)
