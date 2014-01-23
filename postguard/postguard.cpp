@@ -4,6 +4,8 @@
 
 #include "postguard/postguard.h"
 
+#include <pwd.h>
+
 #include <mordor/iomanager.h>
 #include <mordor/socket.h>
 #include <mordor/streams/socket.h>
@@ -43,7 +45,23 @@ Postguard::listen()
             return;
        }
        Stream::ptr stream(new SocketStream(socket));
+
+       uid_t uid;
+       gid_t gid;
+       int rc = getpeereid(socket->socket(), &uid, &gid);
+       if (rc)
+           MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getpeereid");
+
+       struct passwd passwd, *result;
+       boost::scoped_ptr<char> buffer;
+       size_t len = sysconf(_SC_GETPW_R_SIZE_MAX);
+       buffer.reset(new char[len]);
+       rc = getpwuid_r(uid, &passwd, buffer.get(), len, &result);
+       if (rc)
+           MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getpwuid_r");
        std::string user;
+       if (result)
+           user = passwd.pw_name;
 
        Client::ptr client(new Client(*this, stream, user));
        m_clients.insert(client);

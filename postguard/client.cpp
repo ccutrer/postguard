@@ -42,6 +42,8 @@ Client::startup()
     V2MessageType type;
     Buffer message;
 
+    MORDOR_LOG_VERBOSE(g_log) << this << " starting connection from " << m_user;
+
     readV2Message(type, message);
 
     if (type == SSL_REQUEST) {
