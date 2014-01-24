@@ -31,6 +31,7 @@ public:
 private:
     bool startup();
     bool readyForQuery();
+    void proxyQuery(const std::string &query);
 
 private:
     Postguard &m_postguard;

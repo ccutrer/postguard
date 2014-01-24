@@ -6,6 +6,8 @@
 
 #include <map>
 
+#include <boost/regex.hpp>
+
 #include <mordor/endian.h>
 #include <mordor/fiber.h>
 #include <mordor/log.h>
@@ -182,10 +184,14 @@ Client::readyForQuery()
     switch (type) {
         case QUERY:
         {
+            static const boost::regex show_set_query("^(?:SHOW|SET)[^;]+;?$", boost::regex::icase);
+            static const boost::regex go_query("^GO;?$", boost::regex::icase);
             std::string query = message.getDelimited('\0', false, false);
             if (message.readAvailable() != 0u) {
                 writeError("ERROR", "08P01", "Malformed Query message");
-            } else if (query == "GO;") {
+            } else if (boost::regex_match(query, show_set_query)) {
+                proxyQuery(query);
+            } else if (boost::regex_match(query, go_query)) {
                 message.clear();
                 put(message, "GO");
                 writeV3Message(COMMAND_COMPLETE, message);
@@ -220,6 +226,28 @@ Client::readyForQuery()
             break;
     }
     return true;
+}
+
+void
+Client::proxyQuery(const std::string &query)
+{
+    Buffer buffer;
+    put(buffer, query);
+    m_server->writeV3Message(QUERY, buffer);
+    m_server->stream()->flush();
+
+    while (true) {
+        V3MessageType type;
+        buffer.clear();
+        m_server->readV3Message(type, buffer);
+
+        switch (type) {
+            case READY_FOR_QUERY:
+                return;
+            default:
+                writeV3Message(type, buffer);
+        }
+    }
 }
 
 }
