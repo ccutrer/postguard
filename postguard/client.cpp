@@ -7,11 +7,15 @@
 #include <map>
 
 #include <mordor/endian.h>
+#include <mordor/fiber.h>
 #include <mordor/log.h>
+#include <mordor/parallel.h>
 #include <mordor/streams/buffer.h>
 #include <mordor/streams/buffered.h>
+#include <mordor/streams/null.h>
 #include <mordor/streams/ssl.h>
 #include <mordor/streams/stream.h>
+#include <mordor/streams/transfer.h>
 
 #include "postguard/postguard.h"
 #include "postguard/server.h"
@@ -158,6 +162,11 @@ Client::startup()
     return true;
 }
 
+static void transfer(Stream::ptr from, Stream::ptr to)
+{
+    transferStream(from, to);
+}
+
 bool
 Client::readyForQuery()
 {
@@ -167,9 +176,42 @@ Client::readyForQuery()
     m_stream->flush();
 
     V3MessageType type;
+    message.clear();
     readV3Message(type, message);
 
     switch (type) {
+        case QUERY:
+        {
+            std::string query = message.getDelimited('\0', false, false);
+            if (message.readAvailable() != 0u) {
+                writeError("ERROR", "08P01", "Malformed Query message");
+            } else if (query == "GO;") {
+                message.clear();
+                put(message, "GO");
+                writeV3Message(COMMAND_COMPLETE, message);
+                message.clear();
+                put(message, (char)IDLE);
+                writeV3Message(READY_FOR_QUERY, message);
+                m_stream->flush();
+                m_server->stream()->flush();
+                FilterStream::ptr clientBuffered = boost::static_pointer_cast<FilterStream>(m_stream);
+                FilterStream::ptr serverBuffered = boost::static_pointer_cast<FilterStream>(m_server->stream());
+                Stream::ptr client = clientBuffered->parent();
+                Stream::ptr server = serverBuffered->parent();
+                clientBuffered->parent(NullStream::get_ptr());
+                serverBuffered->parent(NullStream::get_ptr());
+                transferStream(clientBuffered, server);
+                transferStream(serverBuffered, client);
+                std::vector<boost::function<void ()> > dgs;
+                dgs.push_back(boost::bind(&transfer, server, client));
+                dgs.push_back(boost::bind(&transfer, client, server));
+                parallel_do(dgs);
+                return false;
+            } else {
+                writeError("ERROR", "42601", "Postguard only understands GO");
+            }
+            break;
+        }
         case TERMINATE:
             m_stream->close();
             return false;

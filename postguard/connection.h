@@ -19,7 +19,7 @@ class Connection : boost::noncopyable
 public:
     struct MessageTooShort : virtual Mordor::Exception {};
 
-protected:
+// internal:
     enum V2MessageType
     {
         SSL_REQUEST         = 80877103,
@@ -31,9 +31,11 @@ protected:
     {
         AUTHENTICATION   = 'R',
         BACKEND_KEY_DATA = 'K',
+        COMMAND_COMPLETE = 'C',
         ERROR_RESPONSE   = 'E',
         NOTICE_RESPONSE  = 'N',
         PARAMETER_STATUS = 'S',
+        QUERY            = 'Q',
         READY_FOR_QUERY  = 'Z',
         TERMINATE        = 'X'
     };
@@ -64,12 +66,14 @@ public:
 
     boost::shared_ptr<Mordor::Stream> stream() { return m_stream; }
 
+// internal:
+    void readV3Message(V3MessageType &type, Mordor::Buffer &message);
+    void writeV3Message(V3MessageType type, const Mordor::Buffer &message);
+
 protected:
     Connection(boost::shared_ptr<Mordor::Stream> stream);
 
     void readV2Message(V2MessageType &type, Mordor::Buffer &message);
-    void readV3Message(V3MessageType &type, Mordor::Buffer &message);
-    void writeV3Message(V3MessageType type, const Mordor::Buffer &message);
 
     void writeError(const std::string &severity, const std::string &code, const std::string &message);
 

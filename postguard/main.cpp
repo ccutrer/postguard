@@ -19,7 +19,7 @@ namespace Postguard {
 static int daemonMain(int argc, char *argv[])
 {
     try {
-        IOManager ioManager;
+        IOManager ioManager(8);
         boost::shared_ptr<SSL_CTX> sslCtx(SSLStream::generateSelfSignedCertificate());
         Postguard postguard(ioManager, "/tmp/.s.PGSQL.5432", sslCtx.get());
         Daemon::onTerminate.connect(boost::bind(&Postguard::stop, &postguard));
