@@ -15,6 +15,7 @@
 #include <mordor/streams/socket.h>
 #include <mordor/streams/ssl.h>
 #include <mordor/streams/stream.h>
+#include <mordor/string.h>
 
 #include "postguard/postguard.h"
 
@@ -130,15 +131,45 @@ Server::connect(const std::string &host, const std::string &sslmode,
 
         switch (type) {
             case AUTHENTICATION:
-                if (message.readAvailable() != 4u)
+                if (message.readAvailable() < 4u)
                     MORDOR_THROW_EXCEPTION(std::runtime_error("malformed Authentication message"));
                 message.copyOut(&authenticationType, 4u);
+                message.consume(4u);
+                authenticationType = byteswap(authenticationType);
                 switch (authenticationType) {
                     case AUTHENTICATION_OK:
+                        if (message.readAvailable() != 0u)
+                            MORDOR_THROW_EXCEPTION(std::runtime_error("malformed Authentication message"));
                         more = false;
                         break;
+                    case AUTHENTICATION_MD5_PASSWORD:
+                    {
+                        if (message.readAvailable() != 4u)
+                            MORDOR_THROW_EXCEPTION(std::runtime_error("malformed Authentication message"));
+                        std::string password;
+                        std::map<std::string, std::string>::const_iterator it(parameters.find("password"));
+                        if (it != parameters.end())
+                            password = it->second;
+                        if (password.length() != 35 || std::equal(password.begin(), password.begin() + 3, "md5")) {
+                            std::string user;
+                            it = parameters.find("user");
+                            if (it != parameters.end())
+                                user = it->second;
+                            password = md5(password + user);
+                        } else {
+                            password = password.substr(3);
+                        }
+                        std::string salt;
+                        salt.resize(4u);
+                        message.copyOut(&salt[0], 4u);
+                        std::string second_hash = "md5" + md5(password + salt);
+                        message.clear();
+                        put(message, second_hash);
+                        writeV3Message(PASSWORD_MESSAGE, message);
+                        m_stream->flush();
+                        break;
+                    }
                     default:
-                        // Call a callback for credentials
                         MORDOR_THROW_EXCEPTION(std::runtime_error("Unsupported authentication type required"));
                 }
                 break;
@@ -256,7 +287,8 @@ Server::clientParameter(const std::string &name)
     return name == "host" ||
            name == "hostaddr" ||
            name == "port" ||
-           name == "sslmode";
+           name == "sslmode" ||
+           name == "password";
 }
 
 }

@@ -35,6 +35,7 @@ public:
         ERROR_RESPONSE   = 'E',
         NOTICE_RESPONSE  = 'N',
         PARAMETER_STATUS = 'S',
+        PASSWORD_MESSAGE = 'p',
         QUERY            = 'Q',
         READY_FOR_QUERY  = 'Z',
         TERMINATE        = 'X'
@@ -49,7 +50,8 @@ public:
 
     enum AuthenticationType
     {
-        AUTHENTICATION_OK = 0
+        AUTHENTICATION_OK           = 0,
+        AUTHENTICATION_MD5_PASSWORD = 5
     };
 
     enum Status

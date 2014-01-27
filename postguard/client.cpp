@@ -135,6 +135,7 @@ Client::startup()
     writeV3Message(AUTHENTICATION, message);
 
     parameters["port"] = "15432";
+    parameters["password"] = "password";
     try {
         m_server = Server::connect(m_ioManager, parameters);
     } catch (...) {
