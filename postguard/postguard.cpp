@@ -6,6 +6,7 @@
 
 #include <pwd.h>
 
+#include <mordor/assert.h>
 #include <mordor/iomanager.h>
 #include <mordor/socket.h>
 #include <mordor/streams/socket.h>
@@ -41,6 +42,13 @@ Postguard::stop()
         ++it) {
         (*it)->close();
     }
+}
+
+void
+Postguard::closed(Client::ptr client)
+{
+    MORDOR_ASSERT(m_clients.find(client) != m_clients.end());
+    m_clients.erase(client);
 }
 
 void

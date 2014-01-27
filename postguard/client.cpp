@@ -48,7 +48,7 @@ Client::run()
     } catch(...) {
         MORDOR_LOG_ERROR(g_log) << this << " Unexpected exception: " << boost::current_exception_diagnostic_information();
     }
-    // TODO: notify the postguard
+    m_postguard.closed(shared_from_this());
 }
 
 bool

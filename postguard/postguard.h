@@ -30,6 +30,9 @@ public:
 
     const PgPassFile &pgPassFile() const { return m_pg_pass_file; }
 
+// internal:
+    void closed(boost::shared_ptr<Client> client);
+
 private:
     void listen();
 

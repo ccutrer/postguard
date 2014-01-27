@@ -16,7 +16,7 @@ namespace Postguard {
 class Postguard;
 class Server;
 
-class Client : public Connection
+class Client : public Connection, public boost::enable_shared_from_this<Client>
 {
 public:
     typedef boost::shared_ptr<Client> ptr;
