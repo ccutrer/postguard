@@ -24,6 +24,7 @@ private:
 public:
     static ptr connect(Mordor::IOManager &ioManager,
         const std::map<std::string, std::string> &parameters);
+    static std::map<std::string, std::string> parseURI(const Mordor::URI &uri);
 
     unsigned int pid() const { return m_pid; }
     unsigned int secretKey() const { return m_secretKey; }

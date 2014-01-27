@@ -18,6 +18,7 @@
 #include <mordor/streams/ssl.h>
 #include <mordor/streams/stream.h>
 #include <mordor/streams/transfer.h>
+#include <mordor/uri.h>
 
 #include "postguard/postguard.h"
 #include "postguard/server.h"
@@ -134,10 +135,19 @@ Client::startup()
     put(message, AUTHENTICATION_OK);
     writeV3Message(AUTHENTICATION, message);
 
-    parameters["port"] = "15432";
-    parameters["password"] = "password";
+    std::map<std::string, std::string> server_parameters =
+        Server::parseURI(URI("postgres://:password@:15432"));
+
+    // Translate on-wire "database" to "dbname" used in connection string
+    std::map<std::string, std::string>::iterator it;
+    if ( (it = parameters.find("database")) != parameters.end()) {
+        parameters["dbname"] = it->second;
+        parameters.erase(it);
+    }
+
+    server_parameters.insert(parameters.begin(), parameters.end());
     try {
-        m_server = Server::connect(m_ioManager, parameters);
+        m_server = Server::connect(m_ioManager, server_parameters);
     } catch (...) {
         MORDOR_LOG_ERROR(g_log) << this << " Unable to connect to server: " <<
             boost::current_exception_diagnostic_information();

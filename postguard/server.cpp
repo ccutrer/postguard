@@ -16,6 +16,7 @@
 #include <mordor/streams/ssl.h>
 #include <mordor/streams/stream.h>
 #include <mordor/string.h>
+#include <mordor/uri.h>
 
 #include "postguard/postguard.h"
 
@@ -96,6 +97,63 @@ Server::connect(IOManager &ioManager, const std::map<std::string, std::string> &
     return server;
 }
 
+std::map<std::string, std::string>
+Server::parseURI(const Mordor::URI &uri)
+{
+    std::map<std::string, std::string> result;
+    if (uri.authority.userinfoDefined()) {
+        std::vector<std::string> user_and_password =
+            split(uri.authority.userinfo(), ':', 2);
+        if (!user_and_password.front().empty())
+            result["user"] = user_and_password.front();
+        if (user_and_password.size() == 2)
+            result["password"] = user_and_password.back();
+    }
+
+    if (uri.authority.hostDefined() && !uri.authority.host().empty()) {
+        if (uri.authority.host().length() > 2 &&
+            uri.authority.host().front() == '[' &&
+            uri.authority.host().back() == ']') {
+            result["hostaddr"] = uri.authority.host().substr(1u, uri.authority.host().length() - 2);
+        } else {
+            result["host"] = uri.authority.host();
+        }
+    }
+
+    if (uri.authority.portDefined())
+        result["port"] = boost::lexical_cast<std::string>(uri.authority.port());
+
+    if (!uri.path.isEmpty()) {
+        std::ostringstream os;
+        const std::vector<std::string> &segments = uri.path.segments;
+        for (std::vector<std::string>::const_iterator it = segments.begin();
+            it != segments.end();
+            ++it) {
+            if (it != segments.begin())
+                os << '/';
+            // avoid absolute paths
+            if (it == segments.begin() && it->empty())
+              ++it;
+            os << *it;
+        }
+        result["dbname"] = os.str();
+    }
+
+    if (uri.queryDefined()) {
+        URI::QueryString qs = uri.queryString();
+        for (URI::QueryString::const_iterator it(qs.begin());
+             it != qs.end();
+             ++it) {
+            if (it->first == "ssl" && it->second == "true")
+                result["sslmode"] = "require";
+            else
+                result[it->first] = it->second;
+        }
+    }
+
+    return result;
+}
+
 void
 Server::connect(const std::string &host, const std::string &sslmode,
     const std::map<std::string, std::string> &parameters)
@@ -111,8 +169,13 @@ Server::connect(const std::string &host, const std::string &sslmode,
         ++it) {
         if (clientParameter(it->first))
             continue;
-        put(message, it->first);
+        if (it->first == "dbname")
+            put(message, "database");
+        else
+            put(message, it->first);
         put(message, it->second);
+        MORDOR_LOG_VERBOSE(g_log) << this << " wrote parameter " << it->first
+            << "=" << it->second;
     }
     put(message, '\0');
 
