@@ -136,7 +136,7 @@ Client::startup()
     writeV3Message(AUTHENTICATION, message);
 
     std::map<std::string, std::string> server_parameters =
-        Server::parseURI(URI("postgres://:password@:15432"));
+        Server::parseURI(URI("postgres://:15432"));
 
     // Translate on-wire "database" to "dbname" used in connection string
     std::map<std::string, std::string>::iterator it;
@@ -147,7 +147,8 @@ Client::startup()
 
     server_parameters.insert(parameters.begin(), parameters.end());
     try {
-        m_server = Server::connect(m_ioManager, server_parameters);
+        m_server = Server::connect(m_ioManager, server_parameters,
+            &m_postguard.pgPassFile());
     } catch (...) {
         MORDOR_LOG_ERROR(g_log) << this << " Unable to connect to server: " <<
             boost::current_exception_diagnostic_information();

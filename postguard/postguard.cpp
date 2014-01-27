@@ -21,6 +21,8 @@ Postguard::Postguard(IOManager &ioManager, const std::string &path,
     : m_ioManager(ioManager),
       m_sslCtx(sslCtx)
 {
+    m_pg_pass_file.load();
+
     UnixAddress address(path);
     m_listen = address.createSocket(ioManager, SOCK_STREAM);
     unlink(path.c_str());

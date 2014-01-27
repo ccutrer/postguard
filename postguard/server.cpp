@@ -31,9 +31,10 @@ Server::Server(Stream::ptr stream)
 {}
 
 Server::ptr
-Server::connect(IOManager &ioManager, const std::map<std::string, std::string> &parameters)
+Server::connect(IOManager &ioManager, const std::map<std::string, std::string> &parameters,
+    const PgPassFile *pgpass)
 {
-    std::string host, hostaddr, sslmode;
+    std::string host, hostaddr, sslmode, hostforpgpass;
     unsigned short port;
     std::map<std::string, std::string>::const_iterator it;
 
@@ -44,7 +45,7 @@ Server::connect(IOManager &ioManager, const std::map<std::string, std::string> &
     }
 
     if ( (it = parameters.find("host")) != parameters.end()) {
-        host = it->second;
+        hostforpgpass = host = it->second;
     } else {
         host = "/tmp";
     }
@@ -62,6 +63,8 @@ Server::connect(IOManager &ioManager, const std::map<std::string, std::string> &
     std::vector<Address::ptr> addresses;
     if (!hostaddr.empty()) {
        addresses.push_back(IPAddress::create(hostaddr.c_str(), port));
+       if (hostforpgpass.empty())
+           hostforpgpass = hostaddr;
     } else if (!host.empty() && host[0] == '/') {
        std::ostringstream path;
        path << host << "/.s.PGSQL." << port;
@@ -93,7 +96,7 @@ Server::connect(IOManager &ioManager, const std::map<std::string, std::string> &
     }
 
     Server::ptr server(new Server(stream));
-    server->connect(host, sslmode, parameters);
+    server->connect(hostforpgpass, port, sslmode, parameters, pgpass);
     return server;
 }
 
@@ -155,8 +158,9 @@ Server::parseURI(const Mordor::URI &uri)
 }
 
 void
-Server::connect(const std::string &host, const std::string &sslmode,
-    const std::map<std::string, std::string> &parameters)
+Server::connect(const std::string &host, unsigned short port,
+    const std::string &sslmode,
+    const std::map<std::string, std::string> &parameters, const PgPassFile *pgpass)
 {
     if (sslmode == "prefer" || sslmode == "require" || sslmode == "verify-ca" || sslmode == "verify-full") {
         startSSL(host, sslmode);
@@ -209,15 +213,24 @@ Server::connect(const std::string &host, const std::string &sslmode,
                     {
                         if (message.readAvailable() != 4u)
                             MORDOR_THROW_EXCEPTION(std::runtime_error("malformed Authentication message"));
-                        std::string password;
-                        std::map<std::string, std::string>::const_iterator it(parameters.find("password"));
+                        std::string user, password;
+                        std::map<std::string, std::string>::const_iterator it(parameters.find("user"));
                         if (it != parameters.end())
+                            user = it->second;
+
+                        if ( (it = parameters.find("password")) != parameters.end()) {
                             password = it->second;
+                        } else if (pgpass) {
+                            std::string database;
+                            if ( (it = parameters.find("dbname")) != parameters.end())
+                                database = it->second;
+                            else
+                                database = user;
+                            PgPassFile::const_iterator pgpassit = pgpass->find(host, port, database, user);
+                            if (pgpassit != pgpass->end())
+                                password = pgpassit->password();
+                        }
                         if (password.length() != 35 || std::equal(password.begin(), password.begin() + 3, "md5")) {
-                            std::string user;
-                            it = parameters.find("user");
-                            if (it != parameters.end())
-                                user = it->second;
                             password = md5(password + user);
                         } else {
                             password = password.substr(3);
