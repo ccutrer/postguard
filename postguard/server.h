@@ -28,6 +28,7 @@ public:
         const std::map<std::string, std::string> &parameters,
         const PgPassFile *pgpass = NULL);
     static std::map<std::string, std::string> parseURI(const Mordor::URI &uri);
+    static void applyEnvironmentVariables(std::map<std::string, std::string> &parameters);
 
     unsigned int pid() const { return m_pid; }
     unsigned int secretKey() const { return m_secretKey; }

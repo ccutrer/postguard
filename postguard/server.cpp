@@ -17,6 +17,7 @@
 #include <mordor/streams/stream.h>
 #include <mordor/string.h>
 #include <mordor/uri.h>
+#include <mordor/util.h>
 
 #include "postguard/postguard.h"
 
@@ -155,6 +156,33 @@ Server::parseURI(const Mordor::URI &uri)
     }
 
     return result;
+}
+
+void
+Server::applyEnvironmentVariables(std::map<std::string, std::string> &parameters)
+{
+    static const char *params[] = { "HOST", "HOSTADDR", "PORT", "DATABASE",
+        "USER", "PASSWORD", "SERVICE", "OPTIONS", "APPNAME", "SSLMODE",
+        "REQUIRESSL", "SSLCERT", "SSLKEY", "SSLROOTCERT", "SSLCRL", "REQUIREPEER",
+        "KRBSRVNAME", "GSSLIB", "CONNECT_TIMEOUT", "CLIENTENCODING" };
+    for (size_t i = 0; i < sizeof(params)/sizeof(params[0]); ++i) {
+        std::string param = params[i];
+        std::map<std::string, std::string>::const_iterator it;
+        if ( (it = env().find("PG" + param)) != env().end()) {
+            std::string key = param;
+            if (key == "DATABASE")
+                key = "dbname";
+            else if (key == "APPNAME")
+                key = "application_name";
+            else if (key == "CLIENTENCODING")
+                key = "client_encoding";
+            else
+                std::transform(key.begin(), key.end(), key.begin(), &tolower);
+            if (parameters.find(key) != parameters.end())
+                continue;
+            parameters[key] = it->second;
+        }
+    }
 }
 
 void

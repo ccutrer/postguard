@@ -18,7 +18,6 @@
 #include <mordor/streams/ssl.h>
 #include <mordor/streams/stream.h>
 #include <mordor/streams/transfer.h>
-#include <mordor/uri.h>
 
 #include "postguard/postguard.h"
 #include "postguard/server.h"
@@ -135,8 +134,8 @@ Client::startup()
     put(message, AUTHENTICATION_OK);
     writeV3Message(AUTHENTICATION, message);
 
-    std::map<std::string, std::string> server_parameters =
-        Server::parseURI(URI("postgres://:15432"));
+    std::map<std::string, std::string> server_parameters;
+    Server::applyEnvironmentVariables(server_parameters);
 
     // Translate on-wire "database" to "dbname" used in connection string
     std::map<std::string, std::string>::iterator it;
