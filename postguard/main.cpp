@@ -20,9 +20,9 @@ static int daemonMain(int argc, char *argv[])
 {
     try {
         IOManager ioManager(8);
-        boost::shared_ptr<SSL_CTX> sslCtx(SSLStream::generateSelfSignedCertificate());
+        std::shared_ptr<SSL_CTX> sslCtx(SSLStream::generateSelfSignedCertificate());
         Postguard postguard(ioManager, "/tmp/.s.PGSQL.5432", sslCtx.get());
-        Daemon::onTerminate.connect(boost::bind(&Postguard::stop, &postguard));
+        Daemon::onTerminate.connect(std::bind(&Postguard::stop, &postguard));
 
         ioManager.stop();
         return 0;

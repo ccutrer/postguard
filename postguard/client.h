@@ -16,14 +16,14 @@ namespace Postguard {
 class Postguard;
 class Server;
 
-class Client : public Connection, public boost::enable_shared_from_this<Client>
+class Client : public Connection, public std::enable_shared_from_this<Client>
 {
 public:
-    typedef boost::shared_ptr<Client> ptr;
+    typedef std::shared_ptr<Client> ptr;
 
 public:
     Client(Postguard &postguard, Mordor::IOManager &ioManager,
-           boost::shared_ptr<Mordor::Stream> stream,
+           std::shared_ptr<Mordor::Stream> stream,
            const std::string &user);
 
     void run();
@@ -37,7 +37,7 @@ private:
     Postguard &m_postguard;
     Mordor::IOManager &m_ioManager;
     std::string m_user;
-    boost::shared_ptr<Server> m_server;
+    std::shared_ptr<Server> m_server;
 };
 
 }

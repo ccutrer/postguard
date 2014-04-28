@@ -29,14 +29,14 @@ Postguard::Postguard(IOManager &ioManager, const std::string &path,
     unlink(path.c_str());
     m_listen->bind(address);
     m_listen->listen();
-    ioManager.schedule(boost::bind(&Postguard::listen, this));
+    ioManager.schedule(std::bind(&Postguard::listen, this));
 }
 
 void
 Postguard::stop()
 {
     m_listen->cancelAccept();
-    unlink(boost::static_pointer_cast<UnixAddress>(m_listen->localAddress())->path().c_str());
+    unlink(std::static_pointer_cast<UnixAddress>(m_listen->localAddress())->path().c_str());
     for (std::set<Client::ptr>::const_iterator it(m_clients.begin());
         it != m_clients.end();
         ++it) {
@@ -82,7 +82,7 @@ Postguard::listen()
 
        Client::ptr client(new Client(*this, m_ioManager, stream, user));
        m_clients.insert(client);
-       m_ioManager.schedule(boost::bind(&Client::run, client));
+       m_ioManager.schedule(std::bind(&Client::run, client));
     }
 }
 

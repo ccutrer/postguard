@@ -3,8 +3,6 @@
 #include <set>
 #include <vector>
 
-#include <boost/shared_ptr.hpp>
-
 #include <openssl/ssl.h>
 
 #include "pgpass.h"
@@ -31,15 +29,15 @@ public:
     const PgPassFile &pgPassFile() const { return m_pg_pass_file; }
 
 // internal:
-    void closed(boost::shared_ptr<Client> client);
+    void closed(std::shared_ptr<Client> client);
 
 private:
     void listen();
 
 private:
     Mordor::IOManager &m_ioManager;
-    boost::shared_ptr<Mordor::Socket> m_listen;
-    std::set<boost::shared_ptr<Client> > m_clients;
+    std::shared_ptr<Mordor::Socket> m_listen;
+    std::set<std::shared_ptr<Client> > m_clients;
     PgPassFile m_pg_pass_file;
     SSL_CTX *m_sslCtx;
 };

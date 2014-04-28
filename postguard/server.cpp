@@ -77,7 +77,7 @@ Server::connect(IOManager &ioManager, const std::map<std::string, std::string> &
         for (std::vector<Address::ptr>::const_iterator it(addresses.begin());
             it != addresses.end();
             ++it) {
-            boost::static_pointer_cast<IPAddress>(*it)->port(port);
+            std::static_pointer_cast<IPAddress>(*it)->port(port);
         }
     }
 
@@ -340,7 +340,7 @@ Server::startSSL(const std::string &host, const std::string &sslmode)
     char response;
     m_stream->read(&response, 1);
     if (response == 'S') {
-        BufferedStream::ptr bufferedStream = boost::dynamic_pointer_cast<BufferedStream>(m_stream);
+        BufferedStream::ptr bufferedStream = std::dynamic_pointer_cast<BufferedStream>(m_stream);
         // optimize the buffering on top of the socket for SSL packets
         bufferedStream->allowPartialReads(true);
         bufferedStream->flushMultiplesOfBuffer(true);

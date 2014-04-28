@@ -2,8 +2,6 @@
 
 #include <string>
 
-#include <boost/shared_ptr.hpp>
-
 #include "postguard/connection.h"
 
 namespace Mordor {
@@ -18,10 +16,10 @@ class PgPassFile;
 class Server : public Connection
 {
 public:
-    typedef boost::shared_ptr<Server> ptr;
+    typedef std::shared_ptr<Server> ptr;
 
 private:
-    Server(boost::shared_ptr<Mordor::Stream> stream);
+    Server(std::shared_ptr<Mordor::Stream> stream);
 
 public:
     static ptr connect(Mordor::IOManager &ioManager,

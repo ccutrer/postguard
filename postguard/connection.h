@@ -66,14 +66,14 @@ public:
 
     virtual void close();
 
-    boost::shared_ptr<Mordor::Stream> stream() { return m_stream; }
+    std::shared_ptr<Mordor::Stream> stream() { return m_stream; }
 
 // internal:
     void readV3Message(V3MessageType &type, Mordor::Buffer &message);
     void writeV3Message(V3MessageType type, const Mordor::Buffer &message);
 
 protected:
-    Connection(boost::shared_ptr<Mordor::Stream> stream);
+    Connection(std::shared_ptr<Mordor::Stream> stream);
 
     void readV2Message(V2MessageType &type, Mordor::Buffer &message);
 
@@ -82,9 +82,9 @@ protected:
     template <class T> static void put(Mordor::Buffer &buffer, const T &value) {
         buffer.copyIn(&value, sizeof(value));
     }
-    
+
 protected:
-    boost::shared_ptr<Mordor::Stream> m_stream;
+    std::shared_ptr<Mordor::Stream> m_stream;
 };
 
 template <> void Connection::put<std::string>(Mordor::Buffer &message, const std::string &value);

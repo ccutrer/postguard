@@ -73,7 +73,7 @@ Client::startup()
             m_stream->write("S", 1u);
             m_stream->flush();
 
-            BufferedStream::ptr bufferedStream = boost::dynamic_pointer_cast<BufferedStream>(m_stream);
+            BufferedStream::ptr bufferedStream = std::dynamic_pointer_cast<BufferedStream>(m_stream);
             // optimize the buffering on top of the socket for SSL packets
             bufferedStream->allowPartialReads(true);
             bufferedStream->flushMultiplesOfBuffer(true);
@@ -211,15 +211,15 @@ Client::readyForQuery()
                 writeV3Message(READY_FOR_QUERY, message);
                 m_stream->flush();
                 m_server->stream()->flush();
-                FilterStream::ptr clientBuffered = boost::static_pointer_cast<FilterStream>(m_stream);
-                FilterStream::ptr serverBuffered = boost::static_pointer_cast<FilterStream>(m_server->stream());
+                FilterStream::ptr clientBuffered = std::static_pointer_cast<FilterStream>(m_stream);
+                FilterStream::ptr serverBuffered = std::static_pointer_cast<FilterStream>(m_server->stream());
                 Stream::ptr client = clientBuffered->parent();
                 Stream::ptr server = serverBuffered->parent();
                 clientBuffered->parent(NullStream::get_ptr());
                 serverBuffered->parent(NullStream::get_ptr());
                 transferStream(clientBuffered, server);
                 transferStream(serverBuffered, client);
-                std::vector<boost::function<void ()> > dgs;
+                std::vector<std::function<void ()> > dgs;
                 dgs.push_back(boost::bind(&transfer, server, client));
                 dgs.push_back(boost::bind(&transfer, client, server));
                 parallel_do(dgs);
