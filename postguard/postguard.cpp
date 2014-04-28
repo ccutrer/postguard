@@ -28,6 +28,7 @@ Postguard::Postguard(IOManager &ioManager, const std::string &path,
     m_listen = address.createSocket(ioManager, SOCK_STREAM);
     unlink(path.c_str());
     m_listen->bind(address);
+    m_listen->setOption(SOL_SOCKET, SO_PEERCRED, 1);
     m_listen->listen();
     ioManager.schedule(std::bind(&Postguard::listen, this));
 }
@@ -63,17 +64,15 @@ Postguard::listen()
        }
        Stream::ptr stream(new SocketStream(socket));
 
-       uid_t uid;
-       gid_t gid;
-       int rc = getpeereid(socket->socket(), &uid, &gid);
-       if (rc)
-           MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getpeereid");
+       struct ucred creds;
+       size_t len = sizeof(struct ucred);
+       socket->getOption(SOL_SOCKET, SO_PEERCRED, &creds, &len);
 
        struct passwd passwd, *result;
        boost::scoped_ptr<char> buffer;
-       size_t len = sysconf(_SC_GETPW_R_SIZE_MAX);
+       len = sysconf(_SC_GETPW_R_SIZE_MAX);
        buffer.reset(new char[len]);
-       rc = getpwuid_r(uid, &passwd, buffer.get(), len, &result);
+       int rc = getpwuid_r(creds.uid, &passwd, buffer.get(), len, &result);
        if (rc)
            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getpwuid_r");
        std::string user;
