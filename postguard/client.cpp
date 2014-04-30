@@ -5,8 +5,7 @@
 #include "postguard/client.h"
 
 #include <map>
-
-#include <boost/regex.hpp>
+#include <regex>
 
 #include <mordor/endian.h>
 #include <mordor/fiber.h>
@@ -19,6 +18,7 @@
 #include <mordor/streams/stream.h>
 #include <mordor/streams/transfer.h>
 
+#include "postguard/jira.h"
 #include "postguard/postguard.h"
 #include "postguard/server.h"
 
@@ -195,37 +195,18 @@ Client::readyForQuery()
     switch (type) {
         case QUERY:
         {
-            static const boost::regex show_set_query("^(?:SHOW|SET)[^;]+;?$", boost::regex::icase);
-            static const boost::regex go_query("^GO;?$", boost::regex::icase);
+            static const std::regex show_set_query("^(?:SHOW|SET)[^;]+;?$", std::regex::icase);
+            static const std::regex go_query("^GO ([A-Z]+-[0-9]+);?$", std::regex::icase);
             std::string query = message.getDelimited('\0', false, false);
+            std::smatch what;
             if (message.readAvailable() != 0u) {
                 writeError("ERROR", "08P01", "Malformed Query message");
-            } else if (boost::regex_match(query, show_set_query)) {
+            } else if (std::regex_match(query, show_set_query)) {
                 proxyQuery(query);
-            } else if (boost::regex_match(query, go_query)) {
-                message.clear();
-                put(message, "GO");
-                writeV3Message(COMMAND_COMPLETE, message);
-                message.clear();
-                put(message, (char)IDLE);
-                writeV3Message(READY_FOR_QUERY, message);
-                m_stream->flush();
-                m_server->stream()->flush();
-                FilterStream::ptr clientBuffered = std::static_pointer_cast<FilterStream>(m_stream);
-                FilterStream::ptr serverBuffered = std::static_pointer_cast<FilterStream>(m_server->stream());
-                Stream::ptr client = clientBuffered->parent();
-                Stream::ptr server = serverBuffered->parent();
-                clientBuffered->parent(NullStream::get_ptr());
-                serverBuffered->parent(NullStream::get_ptr());
-                transferStream(clientBuffered, server);
-                transferStream(serverBuffered, client);
-                std::vector<std::function<void ()> > dgs;
-                dgs.push_back(boost::bind(&transfer, server, client));
-                dgs.push_back(boost::bind(&transfer, client, server));
-                parallel_do(dgs);
-                return false;
+            } else if (std::regex_match(query, what, go_query)) {
+                return go(what[1]);
             } else {
-                writeError("ERROR", "42601", "Postguard only understands GO");
+                writeError("ERROR", "42601", "Postguard only understands \"GO JIRA-1\"");
             }
             break;
         }
@@ -258,6 +239,51 @@ Client::proxyQuery(const std::string &query)
             default:
                 writeV3Message(type, buffer);
         }
+    }
+}
+
+bool
+Client::go(const std::string &key)
+{
+    Buffer message;
+    bool issueExists;
+    try {
+        issueExists = m_postguard.jira().issueExists(key);
+    } catch(...) {
+        MORDOR_LOG_ERROR(g_log) << this << " Could not determine if " << key << " exists: " <<
+            boost::current_exception_diagnostic_information();
+        writeError("ERROR", "58030", "Unable to contact JIRA");
+        return true;
+    }
+
+    if (issueExists) {
+        MORDOR_LOG_INFO(g_log) << this << " " << m_user << " referenced issue " << key;
+        put(message, "GO");
+        writeV3Message(COMMAND_COMPLETE, message);
+        message.clear();
+        put(message, (char)IDLE);
+        writeV3Message(READY_FOR_QUERY, message);
+        m_stream->flush();
+        m_server->stream()->flush();
+        FilterStream::ptr clientBuffered = std::static_pointer_cast<FilterStream>(m_stream);
+        FilterStream::ptr serverBuffered = std::static_pointer_cast<FilterStream>(m_server->stream());
+        Stream::ptr client = clientBuffered->parent();
+        Stream::ptr server = serverBuffered->parent();
+        clientBuffered->parent(NullStream::get_ptr());
+        serverBuffered->parent(NullStream::get_ptr());
+        transferStream(clientBuffered, server);
+        transferStream(serverBuffered, client);
+        std::vector<std::function<void ()> > dgs;
+        dgs.push_back(boost::bind(&transfer, server, client));
+        dgs.push_back(boost::bind(&transfer, client, server));
+        parallel_do(dgs);
+        return false;
+    } else {
+        MORDOR_LOG_WARNING(g_log) << this << " " << m_user << " referenced non-existent issue " << key;
+        std::ostringstream os;
+        os << "Issue " << key << " does not exist";
+        writeError("ERROR", "42704", os.str());
+        return true;
     }
 }
 

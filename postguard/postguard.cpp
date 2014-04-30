@@ -18,8 +18,9 @@ using namespace Mordor;
 namespace Postguard {
 
 Postguard::Postguard(IOManager &ioManager, const std::string &path,
-    SSL_CTX *sslCtx)
+    Jira &jira, SSL_CTX *sslCtx)
     : m_ioManager(ioManager),
+      m_jira(jira),
       m_sslCtx(sslCtx)
 {
     m_pg_pass_file.load();
@@ -28,7 +29,6 @@ Postguard::Postguard(IOManager &ioManager, const std::string &path,
     m_listen = address.createSocket(ioManager, SOCK_STREAM);
     unlink(path.c_str());
     m_listen->bind(address);
-    m_listen->setOption(SOL_SOCKET, SO_PEERCRED, 1);
     m_listen->listen();
     ioManager.schedule(std::bind(&Postguard::listen, this));
 }

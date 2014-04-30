@@ -10,9 +10,22 @@
 #include <mordor/main.h>
 #include <mordor/streams/ssl.h>
 
+#include "postguard/jira.h"
 #include "postguard/postguard.h"
 
 using namespace Mordor;
+
+static ConfigVar<std::string>::ptr g_jiraUri =
+    Config::lookup("jira.uri", std::string(), "JIRA URI");
+static ConfigVar<std::string>::ptr g_jiraUser =
+    Config::lookup("jira.user", std::string(), "JIRA URI");
+static ConfigVar<std::string>::ptr g_jiraPassword =
+    Config::lookup("jira.password", std::string(), "JIRA Password");
+
+static ConfigVar<std::string>::ptr g_listenPath =
+    Config::lookup("postguard.listen",
+        std::string("/tmp/.s.PGSQL.5432"),
+        "Listen socket");
 
 namespace Postguard {
 
@@ -21,7 +34,8 @@ static int daemonMain(int argc, char *argv[])
     try {
         IOManager ioManager(8);
         std::shared_ptr<SSL_CTX> sslCtx(SSLStream::generateSelfSignedCertificate());
-        Postguard postguard(ioManager, "/tmp/.s.PGSQL.5432", sslCtx.get());
+        Jira jira(ioManager, g_jiraUri->val(), g_jiraUser->val(), g_jiraPassword->val());
+        Postguard postguard(ioManager, g_listenPath->val(), jira, sslCtx.get());
         Daemon::onTerminate.connect(std::bind(&Postguard::stop, &postguard));
 
         ioManager.stop();

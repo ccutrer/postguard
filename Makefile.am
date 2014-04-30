@@ -12,6 +12,7 @@ sbin_PROGRAMS=			\
 nobase_include_HEADERS=			\
 	postguard/client.h		\
 	postguard/connection.h		\
+	postguard/jira.h		\
 	postguard/pgpass.h		\
 	postguard/postguard.h		\
 	postguard/server.h
@@ -19,6 +20,7 @@ nobase_include_HEADERS=			\
 postguard_postguard_SOURCES=		\
 	postguard/client.cpp		\
 	postguard/connection.cpp	\
+	postguard/jira.cpp		\
 	postguard/main.cpp		\
 	postguard/pgpass.cpp		\
 	postguard/postguard.cpp		\

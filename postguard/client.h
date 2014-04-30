@@ -13,6 +13,7 @@ class Stream;
 
 namespace Postguard {
 
+class Jira;
 class Postguard;
 class Server;
 
@@ -32,6 +33,7 @@ private:
     bool startup();
     bool readyForQuery();
     void proxyQuery(const std::string &query);
+    bool go(const std::string &key);
 
 private:
     Postguard &m_postguard;
